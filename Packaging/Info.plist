@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleIdentifier</key><string>local.zhazhahui.shinchan-todo</string>
+  <key>CFBundleName</key><string>小新待办</string>
+  <key>CFBundleDisplayName</key><string>小新待办</string>
+  <key>CFBundleExecutable</key><string>ShinchanTodo</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.2.1</string>
+  <key>CFBundleVersion</key><string>4</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSPrincipalClass</key><string>NSApplication</string>
+  <key>NSRemindersFullAccessUsageDescription</key><string>小新待办需要完整提醒事项读写权限，以创建并管理你明确选择的新专用清单。应用不会查询其他清单的任务正文。修改和删除将由苹果同步到你的其他设备。</string>
+</dict></plist>

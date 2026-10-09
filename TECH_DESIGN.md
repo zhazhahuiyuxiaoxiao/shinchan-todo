@@ -1,0 +1,53 @@
+# 小新待办技术设计
+
+## 构建与架构
+
+SwiftUI + EventKit + Foundation，最低 macOS 14，无第三方依赖。用 Swift Package Manager 构建核心库、EventKit 适配层和桌面程序；本机构建脚本生成含 Info.plist、权限说明及 ad-hoc 签名的 .app。不自动安装 Xcode、不登录开发者账号、不发布或公证。
+
+核心模块包含任务值对象、查询、统计和限制单清单的服务。EventKit 适配层拥有一个长期存活的 EKEventStore，封装权限、账户元数据、创建清单、查询、获取记录、保存和删除。SwiftUI 状态对象在主线程管理设置、选择、编辑草稿、加载、错误与任务刷新。测试用内存适配器替代系统数据库边界，业务服务与查询逻辑保持真实。
+
+任务快照：EventKit 本地标识、清单标识、标题、备注、日期、原生优先级、完成状态、创建/修改时间、版本签名及日期是否含时间/重复规则。编辑草稿仅携带允许修改的字段。优先级写入原生 0/9/5/1，读取 1–4 为高、5 为中、6–9 为低、0 为无；未修改优先级保留原值。
+
+## 权限与清单创建
+
+显式连接后调用 requestFullAccessToReminders。Info.plist 配置 NSRemindersFullAccessUsageDescription。未授权不查询任务；拒绝、受限或撤销时显示可恢复提示。
+
+EventKit 没有单独的“这是 iCloud”类型。列出具有可写提醒事项清单的 CalDAV 账户元数据，用户明确确认所选账户为 iCloud；不把 Google 等 CalDAV 账户自动当成 iCloud。无候选时提示在系统提醒事项中启用 iCloud 并建立普通清单，再刷新。新清单设置所选 source，保存成功后持久化 calendarIdentifier；同名创建新名称，不接管原清单。
+
+每次操作检查授权、清单存在和可写；每次读取都传入明确的清单集合，不使用 nil 查询全部。单条读取也接收绑定清单标识，在读取正文快照前检查归属；保存前调用 refresh 核对有效记录和版本，跨清单记录一律拒绝。绑定清单消失后阻止全部写入，不自动重建。切换账户会清除用户的 iCloud 确认。
+
+## 编辑、冲突与刷新
+
+编辑/完成/删除提交时重取记录并与用户操作时的版本比较；变化则拒绝覆盖，保留草稿。版本签名由允许编辑字段、完整日期组件、重复规则描述和修改时间构成。显式载入最新时先重新读取单条任务，成功后才替换用户确认放弃的草稿；读取失败或记录删除时保留草稿。
+
+修改现有 EKReminder 对象，仅写入发生变化的字段，保留附件、URL、alarm、未修改的重复规则和其他未覆盖属性；高级日期或重复任务的日期字段只读。
+
+EventKit 不提供带期望版本的原子写入接口，保存前核对不能保证核对与系统写入之间另一设备的同时提交；首版不承诺跨设备原子冲突锁，也不因此引入独立云服务。
+
+EventKit 写入与后续刷新是两个不同结果：写入失败保留草稿；写入已成功但刷新失败提示“已保存，重新加载失败”，不能让用户误认为需重做写入。刷新请求使用代次标识，旧请求不覆盖新请求。EventKit 变化通知、应用激活和本地日历日变更触发重新读取。
+
+日期用 Gregorian 的年/月/日浮动组件保存，不加入时分秒，不设置 EKAlarm。筛选以用户当前时区的本地日为边界，带时间的外部任务保留原日期。统计从未筛选快照计算。
+
+## 界面与资源
+
+三栏使用原生 HSplitView，避免 NavigationSplitView 在嵌套标题布局中插入系统工具栏造成遮挡。侧栏可滚动且支持 Command Option B 折叠；各列设最小宽度，列表和表单独立滚动。
+
+浅色主题：cream #FFF8E7、ink #20212B、red #CE3B3B、sun #F6D66B、sky #C9E8EF。原生表单和语义按钮配合圆角描边；小新 PNG 装饰本地打包，记录生成来源，仅作装饰。控件与文字可用性优先，不让插画遮挡任务。编辑面板有显式保存/取消；切换任务、新建或刷新编辑内容前保护未保存草稿。加载、空列表、无搜索结果、失败与授权状态分别呈现。
+
+## 验证与交付
+
+Swift 自动测试验证日期、组合筛选、搜索、排序、统计、清单范围守卫、冲突、权限撤销和写入失败。打包后验证签名、权限键、资源、最低版本及程序启动。使用可见的演示数据模式检查 UI，演示模式不初始化 EventKit、不读取偏好绑定或真实数据。真实系统授权由用户完成，真实清单及 iPhone 同步验收单独记录。
+
+测试入口为 `bash scripts/test.sh`，运行独立断言程序 CoreChecks；当前 CLT 缺少 Swift Testing 运行库，未使用或宣称 `swift test` 通过。
+
+## 0.2.0 每日规则映射
+
+TaskRepeat 表达 none / daily / other；TaskDraft 包含重复选择，所以只修改重复设置也会触发草稿保护。TaskDraft.validated 同时用于服务与适配器：新建/切换到每日必须有日期；高级日期不修改；不创建或替换 other；已完成或带时间任务不改变重复设置。原有范围、权限、版本检查继续先于写入。
+
+ReminderRecurrence 将单条 daily、interval 1、无结束条件和 BY 筛选的全天规则映射为 daily；其余标记 other 并保持原始对象。写入 daily 使用 EKRecurrenceRule(recurrenceWith: .daily, interval: 1, end: nil)，none 写入 nil；编辑仅在重复选择变化时写 recurrenceRules，不因普通备注编辑重建规则。版本签名已覆盖完整重复属性。
+
+完成仍仅设置 isCompleted 并保存，然后读取绑定清单；不计算秒数、不复制记录、不引入额外调度状态。苹果官方说明重复提醒事项只能获取当前第一条未完成记录，完成后下一条可获取。写入后的生成和 iCloud 同步由苹果负责，真实系统行为单独验收。
+
+测试包含真实 EKRecurrenceRule 对象的映射与输出契约，不初始化 EKEventStore；系统数据库边界继续用内存替代。DemoBackend 保持纯内存，只保存设置，不模拟苹果生成。原生日期含具体时间的每日规则视为高级规则。
+
+参考：[苹果重复提醒事项机制](https://developer.apple.com/documentation/eventkit/creating-a-recurring-event)、[原生规则初始化](https://developer.apple.com/documentation/eventkit/ekrecurrencerule/init(recurrencewith:interval:end:))。
