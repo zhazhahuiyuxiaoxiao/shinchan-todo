@@ -8,6 +8,18 @@ SwiftUI + EventKit + Foundation，最低 macOS 14，无第三方依赖。用 Swi
 
 任务快照：EventKit 本地标识、清单标识、标题、备注、日期、原生优先级、完成状态、创建/修改时间、版本签名及日期是否含时间/重复规则。编辑草稿仅携带允许修改的字段。优先级写入原生 0/9/5/1，读取 1–4 为高、5 为中、6–9 为低、0 为无；未修改优先级保留原值。
 
+## 技术选型依据
+
+选型围绕已确认的使用方式：Mac 提供自制原生界面，手机继续操作同一个苹果提醒事项清单。Swift + SwiftUI 负责窗口、表单、快捷键及可访问性；EventKit 负责进入系统提醒事项的数据边界；iCloud 同步由苹果承担。这使首版无需维护独立账号、任务数据库和跨设备同步服务，但仍依赖用户授权、账户配置及苹果同步条件。
+
+共享状态采用系统自带的 Combine / ObservableObject：TodoController 发布任务快照、查询条件、编辑草稿及连接与错误状态，SwiftUI 观察更新。首版单清单规模下，这套状态管理已能覆盖共享状态和失败保护；查询、统计放在值对象中，系统访问放在 ReminderBackend 实现中，界面只组织交互。
+
+样式使用 SwiftUI 的布局、颜色、形状、ButtonStyle 与 ViewModifier，统一主题并保留原生输入行为；日期使用 Foundation 的 Calendar 与 DateComponents，同时匹配按日筛选和 EventKit 浮动日期组件。UserDefaults 只持久化清单标识，任务来自系统，草稿和筛选保留内存；退出前未保存的草稿会丢失。
+
+Swift Package Manager 分模块构建，Bash 使用已有命令行工具组装和验证自用 `.app`。CoreChecks 是当前 CLT 缺少 Swift Testing 运行库时的可执行断言入口，不增加第三方测试依赖；系统数据库使用内存边界替代，真实规则对象可直接验证映射。自动检查的结果与系统权限、真实写入及跨设备验收分开记录。
+
+若后续要求 Windows/浏览器使用、多人协作、独立同步或更复杂的清单关系，需要重新确认平台、数据归属和维护成本，再评估架构；当前首版范围内保持这套最简单的实现。README 的「技术栈与技术选型」和「关键技术点」提供面向项目读者的完整说明。
+
 ## 权限与清单创建
 
 显式连接后调用 requestFullAccessToReminders。Info.plist 配置 NSRemindersFullAccessUsageDescription。未授权不查询任务；拒绝、受限或撤销时显示可恢复提示。
