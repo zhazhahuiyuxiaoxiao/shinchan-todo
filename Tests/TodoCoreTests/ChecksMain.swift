@@ -70,6 +70,15 @@ import TodoCore
         await Checks.run("focus reread cannot rebase dirty draft across concurrent external change") { try await focusSummaryRereadCannotAuthorizeOverwritingConcurrentChanges() }
         await Checks.run("focus duration manual input bounds and invalid text") { focusDurationTextRejectsInvalidInput() }
         await Checks.run("focus duration settings preserve active round and persist") { await focusDurationSettingsDoNotChangeActiveRun() }
+        await Checks.run("timed daily remains recognized") { timedDailyIsStillRecognized() }
+        await Checks.run("weekly displays repeat interval") { weeklyRepeatHasUsefulDescription() }
+        await Checks.run("custom native rules preserve intervals weekdays month patterns and ends") { try nativeCustomRulesRoundTripWithoutLosingMeaning() }
+        await Checks.run("unsupported repeat detail and write protection") { try unsupportedRecurrenceIsDescribedAndCannotBeReplaced() }
+        await Checks.run("custom repeat rejects invalid input before saving") { customRepeatValidationRejectsInvalidFieldsBeforeWrite() }
+        await Checks.run("timed repeat edit keeps fields and failure draft") { try await timedRepeatEditingKeepsDateAndSummaryAndConflictDraft() }
+        await Checks.run("repeat end date covers full DST day") { try repeatEndDateIncludesFullDayAcrossDST() }
+        await Checks.run("repeat presets positions and focus instances") { try repeatPresetsAndMonthlyPositionMapping() }
+        await Checks.run("explicit draft reset invalidates editor inputs but refresh keeps them") { try await explicitDraftResetChangesEditorIdentityButBackgroundUpdatesDoNot() }
         print("\(Checks.cases) cases, \(Checks.failures) failed assertions")
         exit(Checks.failures == 0 ? 0 : 1)
     }

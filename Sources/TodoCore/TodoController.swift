@@ -9,6 +9,7 @@ public enum ConnectionPhase { case disconnected, chooseAccount, ready, unavailab
     @Published public var phase: ConnectionPhase = .disconnected
     @Published public var query = TaskQuery()
     @Published public var draft = TaskDraft()
+    @Published public private(set) var editorGeneration = 0
     @Published public var editingTask: TodoTask?
     @Published public var hasEditor = false
     @Published public var loading = false
@@ -78,6 +79,7 @@ public enum ConnectionPhase { case disconnected, chooseAccount, ready, unavailab
     }
     @discardableResult public func beginNew(discardChanges: Bool = false) -> Bool {
         guard !isDirty || discardChanges else { return false }
+        editorGeneration += 1
         editingTask = nil; draft = TaskDraft(); hasEditor = true
         errorMessage = nil; notice = nil; lastWriteSucceeded = false
         return true
@@ -85,15 +87,17 @@ public enum ConnectionPhase { case disconnected, chooseAccount, ready, unavailab
     @discardableResult public func select(_ task: TodoTask, discardChanges: Bool = false) -> Bool {
         guard !isDirty || discardChanges else { return false }
         guard task.calendarID == calendarID else { report(TodoError.outsideList); return false }
+        editorGeneration += 1
         editingTask = task; draft = TaskDraft(task: task); hasEditor = true
         errorMessage = nil; notice = nil; lastWriteSucceeded = false
         return true
     }
-    public func closeEditor() { hasEditor = false; editingTask = nil; draft = TaskDraft() }
+    public func closeEditor() { editorGeneration += 1; hasEditor = false; editingTask = nil; draft = TaskDraft() }
     @discardableResult public func reloadEditor(discardChanges: Bool = false) -> Bool {
         guard !busy, let editingTask, !isDirty || discardChanges else { return false }
         do {
             let latest = try service().reload(editingTask)
+            editorGeneration += 1
             self.editingTask = latest; draft = TaskDraft(task: latest)
             if let index = tasks.firstIndex(where: { $0.id == latest.id }) { tasks[index] = latest }
             errorMessage = nil; notice = nil; lastWriteSucceeded = false

@@ -54,7 +54,7 @@ Swift 自动测试验证日期、组合筛选、搜索、排序、统计、清�
 
 测试入口为 `bash scripts/test.sh`，运行独立断言程序 CoreChecks；当前 CLT 缺少 Swift Testing 运行库，未使用或宣称 `swift test` 通过。
 
-## 0.2.0 每日规则映射
+## 0.2.0 每日规则映射（历史，现行设计见 0.4.0）
 
 TaskRepeat 表达 none / daily / other；TaskDraft 包含重复选择，所以只修改重复设置也会触发草稿保护。TaskDraft.validated 同时用于服务与适配器：新建/切换到每日必须有日期；高级日期不修改；不创建或替换 other；已完成或带时间任务不改变重复设置。原有范围、权限、版本检查继续先于写入。
 
@@ -87,3 +87,22 @@ README 详述使用流程、选型理由和手机/本机数据边界；自动测
 TaskListView 使用 ZStack 中两个兄弟 Button：编辑按钮的 label 包含完整内边距、背景和 RoundedRectangle contentShape，完成圆圈单独放在左上方。描边 overlay 禁用命中，避免视觉边界挡住点击；不通过嵌套 Button 或外层 onTapGesture 混合完成与编辑动作。
 
 FocusCard 使用 String 草稿、FocusState 和 onSubmit 实现输入；FocusDurationInput 仅接受范围内十进制整数，回车、失焦及启动前校验；卡片直接切换销毁时通过 onDisappear 提交有效输入，避免只依赖失焦通知导致丢失。非法值不截断或默默变为默认值，不更新持久化偏好。Stepper 与文本共用同一提交入口；TaskEditorView 按 FocusKey 设置卡片身份，避免切换任务复用上一任务的输入。保存时长可能更新任务摘要版本，启动时使用 TodoController 保留的当前编辑快照，沿用原有版本、范围及权限检查。没有增加依赖或改变 JSON 格式。
+
+
+## 0.4.0 重复规则编辑器与原生映射
+
+TaskRepeat 从三值枚举改为 Hashable 值对象：none、带 RepeatSchedule 的可编辑规则、带详细说明的不可编辑规则；保留 daily / other 静态入口供原有调用方。RepeatSchedule 表达公历频率、间隔、Apple 星期编号、月内日期、月内次序及 RepeatEnd（永不/日期/次数），不持久化到本地 JSON。RepeatPreset 生成常用规则，用户界面按实际条件识别预设。
+
+ReminderRecurrence 不再依据 hasTime 判定规则可读性。读取完整规则，只有能够无损重建的范围进入编辑模型：公历、当前系统默认周起点、天/周/月/年、支持的 BYDAY 或 BYMONTHDAY/月内单星期次序、结束条件。EKRecurrenceRule 的默认 firstDayOfTheWeek 实际会返回本机地区的周起点，通过同一原生构造器取默认值核对，不能假设固定为 0。不同周起点及其他不支持的组合只读详细显示；每月一个星期加一个 BYSETPOS 可等价为 ordinal weekday。其余条件不擅自丢弃。
+
+写入使用完整 EKRecurrenceRule 初始化器；仅在 current.repeatRule 与 draft.repeatRule 不相等时设置 recurrenceRules，普通编辑保留原对象。原有期望版本签名增加 calendarIdentifier，继续涵盖原生频率、间隔、周起点、BY 数组及结束值。日期字段保持原有只读守卫，修改重复不写日期/时间、startDateComponents、alarms、附件、URL 或其他高级属性；真实边界保留仍需实测。取消可识别规则只清除 recurrenceRules。已完成或未知规则拒绝重复改写。
+
+TaskDraft.validated 校验变化规则的首次日期、间隔、星期、月内条件和结束值；已有未经修改的规则不按新编辑器限制重新构建，以免普通备注编辑破坏外部设置。RepeatEditorView 将输入错误纳入 repeatInputError：无效文本保留在编辑器，任务保存不能静默使用旧整数。预设切换明确替换选择，频率切换保留整数输入错误；TodoController 的 editorGeneration 在明确选择、新建、重载和关闭草稿时推进，RepeatEditorView 用它作为身份，即使同一任务/同一规则也重建输入。失败重载、未确认放弃、普通刷新和专注摘要更新不推进代次或清除输入；普通焦点变化不重置。
+
+界面沿用详情滚动区，常用预设后按需展开自定义与结束条件；星期使用原生 Toggle，月内日期使用自适应按钮网格并声明选择状态，所有输入具有标签与就地提示。任务列表显示具体条件，长条件限制两行并提供完整悬停提示，未知组合标为只读。
+
+指定最后日期使用 Calendar 从本地日始增加一个日历日减一秒，避免夏令时按固定 86400 秒造成跨日偏差。手机读取的精确结束时刻保持，只有用户修改日期选择才转换到日末。月内不存在的日期及下一次任务生成完全交由苹果，不增添自制调度器。
+
+FocusKey、专注 JSON 版本、清单绑定及系统授权没有变化。重复模型扩展为所有支持频率，但实例继续由标识及当次日期区分；完整历史和偏好文件无需迁移。DemoBackend 只保存纯内存设置，不初始化 EKEventStore，不生成下一次。
+
+自动检查使用真实 EKRecurrenceRule 及核心服务/控制器，不访问真实数据。交付仍须运行全量 CoreChecks、release 编译、应用包验证及独立演示 UI；本机存储/提醒事项/iPhone 的真实验证各自记录。未增加 Swift Package、网络 API、后台服务或手机应用。

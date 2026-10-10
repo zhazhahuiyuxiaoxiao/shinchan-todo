@@ -1,10 +1,5 @@
 import Foundation
 
-public enum TaskRepeat: String, Sendable {
-    case none, daily, other
-    public var title: String { switch self { case .none: "无"; case .daily: "每天"; case .other: "其他（苹果管理）" } }
-}
-
 public enum TaskPriority: Int, CaseIterable, Identifiable, Sendable {
     case none = 0, low = 9, medium = 5, high = 1
     public var id: Int { rawValue }
@@ -27,7 +22,7 @@ public struct TodoTask: Identifiable, Equatable, Sendable {
     public var revision: String
     public var advancedDate: Bool
     public var repeatRule: TaskRepeat
-    public var canEditRepeat: Bool { !completed && repeatRule != .other && (!advancedDate || repeatRule == .daily) }
+    public var canEditRepeat: Bool { !completed && repeatRule.isEditable }
     public var priority: TaskPriority { .from(native: nativePriority) }
     public init(id: String, calendarID: String, title: String, notes: String = "", dueDate: Date? = nil,
                 nativePriority: Int = 0, completed: Bool = false, createdAt: Date? = nil,
@@ -45,6 +40,7 @@ public struct TaskDraft: Equatable, Sendable {
     public var dueDate: Date?
     public var priority: TaskPriority = .none
     public var repeatRule: TaskRepeat = .none
+    public var repeatInputError: String?
     public init() {}
     public init(task: TodoTask) { title = task.title; notes = FocusNotes.editableNotes(task.notes); dueDate = task.dueDate; priority = task.priority; repeatRule = task.repeatRule }
     public func validated(for current: TodoTask? = nil) throws -> Self {
@@ -53,9 +49,14 @@ public struct TaskDraft: Equatable, Sendable {
         guard !draft.title.isEmpty else { throw TodoError.emptyTitle }
         if let current {
             if current.advancedDate && dueDate != current.dueDate { throw TodoError.advancedDate }
-            if repeatRule != current.repeatRule && (!current.canEditRepeat || repeatRule == .other) { throw TodoError.repeatReadOnly }
-        } else if repeatRule == .other { throw TodoError.repeatReadOnly }
-        if repeatRule == .daily && dueDate == nil && current?.repeatRule != .daily { throw TodoError.repeatNeedsDate }
+            if repeatRule != current.repeatRule && (!current.canEditRepeat || !repeatRule.isEditable) { throw TodoError.repeatReadOnly }
+        } else if !repeatRule.isEditable { throw TodoError.repeatReadOnly }
+        if repeatInputError != nil { throw TodoError.invalidRepeat }
+        if repeatRule != .none && repeatRule != current?.repeatRule {
+            guard let dueDate else { throw TodoError.repeatNeedsDate }
+            if let schedule = repeatRule.schedule { _ = try schedule.validated(start: dueDate) }
+        }
+        if current == nil, let schedule = repeatRule.schedule { _ = try schedule.validated(start: dueDate) }
         return draft
     }
 }

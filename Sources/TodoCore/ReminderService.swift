@@ -7,7 +7,7 @@ public struct ReminderAccount: Identifiable, Equatable, Sendable {
     public init(id: String, title: String) { self.id = id; self.title = title }
 }
 public enum TodoError: LocalizedError, Equatable {
-    case permission, missingList, readOnly, outsideList, missingTask, conflict, emptyTitle, advancedDate, readFailed, repeatNeedsDate, repeatReadOnly
+    case permission, missingList, readOnly, outsideList, missingTask, conflict, emptyTitle, advancedDate, readFailed, repeatNeedsDate, repeatReadOnly, invalidRepeat
     public var errorDescription: String? {
         switch self {
         case .permission: "未获得提醒事项权限。请在系统设置的隐私与安全性中允许访问，再刷新。"
@@ -19,8 +19,9 @@ public enum TodoError: LocalizedError, Equatable {
         case .emptyTitle: "请输入任务标题。"
         case .advancedDate: "这条任务含具体时间或重复设置，请在苹果提醒事项中修改日期。"
         case .readFailed: "读取提醒事项失败，请重试。"
-        case .repeatNeedsDate: "每天重复需要先设置截止日期，作为第一次任务的日期。"
-        case .repeatReadOnly: "已完成、带具体时间或自定义重复的任务，请在苹果提醒事项中管理重复设置；普通已完成任务可先恢复。"
+        case .repeatNeedsDate: "重复任务需要先设置截止日期，作为第一次任务的日期。"
+        case .invalidRepeat: "重复设置无效：请检查整数间隔、星期、月内日期和结束条件；结束日期不能早于首次任务时间。"
+        case .repeatReadOnly: "已完成或无法安全编辑的规则为只读；已完成任务可先恢复，其他规则请在苹果提醒事项中管理。"
         }
     }
 }

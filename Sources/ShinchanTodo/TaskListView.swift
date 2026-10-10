@@ -76,8 +76,8 @@ struct TaskListView: View {
                             .padding(.horizontal, 7).padding(.vertical, 3).background(task.priority == .high ? Crayon.yellow : Crayon.sky, in: Capsule())
                     }
                     if task.repeatRule != .none {
-                        Label(task.repeatRule == .daily ? "每天重复" : "其他重复规则", systemImage: "repeat")
-                            .font(.system(size: 11)).foregroundStyle(Crayon.muted)
+                        Label(task.repeatRule.title + (task.repeatRule.isEditable ? "" : " · 只读"), systemImage: "repeat")
+                            .font(.system(size: 11)).foregroundStyle(Crayon.muted).lineLimit(2).help(task.repeatRule.title)
                     }
                 }.frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                     .padding(.vertical, 3).padding(.leading, 44).padding(12)

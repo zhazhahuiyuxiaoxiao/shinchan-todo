@@ -36,18 +36,8 @@ struct TaskEditorView: View {
                         Text(model.editingTask?.advancedDate == true ? "含具体时间或重复设置，日期请在苹果提醒事项中修改。其他字段仍可编辑。" : "只记录日期，暂不配置提醒通知。")
                     }.font(.system(size: 12)).foregroundStyle(Crayon.muted)
                     Picker("优先级", selection: $model.draft.priority) { ForEach(TaskPriority.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                    VStack(alignment: .leading, spacing: 8) {
-                        if model.draft.repeatRule == .other {
-                            Label("其他重复规则 · 在苹果提醒事项中管理", systemImage: "repeat").font(.system(size: 13, weight: .semibold))
-                        } else {
-                            Picker("重复", selection: $model.draft.repeatRule) {
-                                Text("无").tag(TaskRepeat.none)
-                                Text("每天").tag(TaskRepeat.daily)
-                            }.pickerStyle(.menu).disabled(model.editingTask?.canEditRepeat == false)
-                        }
-                        Text(model.editingTask?.canEditRepeat == false ? "已完成或带高级设置的任务，重复设置只读。" : "每天重复需设置第一次截止日期；完成后由苹果提供下一次任务。")
-                            .font(.system(size: 12)).foregroundStyle(Crayon.muted).fixedSize(horizontal: false, vertical: true)
-                    }
+                    RepeatEditorView(draft: $model.draft, task: model.editingTask)
+                        .id(model.editorGeneration)
                     HStack(spacing: 12) {
                         Button("保存任务") { Task { await model.save() } }.buttonStyle(CrayonButton(fill: Crayon.red, foreground: .white))
                             .keyboardShortcut("s", modifiers: .command).disabled(model.busy)

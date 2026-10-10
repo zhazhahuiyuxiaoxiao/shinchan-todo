@@ -94,7 +94,7 @@ import TodoCore
         calendar.timeZone = components?.timeZone ?? .current
         let dueDate = components.flatMap { calendar.date(from: $0) }
         let repeats = (reminder.recurrenceRules ?? []).map { rule in
-            [String(rule.frequency.rawValue), String(rule.interval), String(rule.firstDayOfTheWeek),
+            [rule.calendarIdentifier, String(rule.frequency.rawValue), String(rule.interval), String(rule.firstDayOfTheWeek),
              String(describing: rule.recurrenceEnd?.endDate), String(describing: rule.recurrenceEnd?.occurrenceCount),
              (rule.daysOfTheWeek ?? []).map { "\($0.dayOfTheWeek.rawValue):\($0.weekNumber)" }.joined(separator: ","),
              String(describing: rule.daysOfTheMonth), String(describing: rule.monthsOfTheYear),
