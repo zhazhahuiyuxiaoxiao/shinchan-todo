@@ -74,7 +74,7 @@ struct TaskListView: View {
             Button { onSelect(task) } label: {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(task.title).font(.system(size: 15, weight: .bold)).strikethrough(task.completed).lineLimit(3).multilineTextAlignment(.leading)
-                    if !task.notes.isEmpty { Text(task.notes).font(.system(size: 12)).foregroundStyle(Crayon.muted).lineLimit(2).multilineTextAlignment(.leading) }
+                    if !FocusNotes.editableNotes(task.notes).isEmpty { Text(FocusNotes.editableNotes(task.notes)).font(.system(size: 12)).foregroundStyle(Crayon.muted).lineLimit(2).multilineTextAlignment(.leading) }
                     HStack(spacing: 8) {
                         if let due = task.dueDate { Label(due.formatted(.dateTime.month().day()), systemImage: "calendar").font(.system(size: 11)) }
                         Text(task.priority == .none ? "无优先级" : "\(task.priority.title)优先级").font(.system(size: 10, weight: .semibold))

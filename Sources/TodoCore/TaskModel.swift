@@ -46,7 +46,7 @@ public struct TaskDraft: Equatable, Sendable {
     public var priority: TaskPriority = .none
     public var repeatRule: TaskRepeat = .none
     public init() {}
-    public init(task: TodoTask) { title = task.title; notes = task.notes; dueDate = task.dueDate; priority = task.priority; repeatRule = task.repeatRule }
+    public init(task: TodoTask) { title = task.title; notes = FocusNotes.editableNotes(task.notes); dueDate = task.dueDate; priority = task.priority; repeatRule = task.repeatRule }
     public func validated(for current: TodoTask? = nil) throws -> Self {
         var draft = self
         draft.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -92,7 +92,7 @@ public struct TaskQuery: Sendable {
             if status == .pending && task.completed { return false }
             if status == .completed && !task.completed { return false }
             if let priority, task.priority != priority { return false }
-            return term.isEmpty || task.title.localizedCaseInsensitiveContains(term) || task.notes.localizedCaseInsensitiveContains(term)
+            return term.isEmpty || task.title.localizedCaseInsensitiveContains(term) || FocusNotes.editableNotes(task.notes).localizedCaseInsensitiveContains(term)
         }.sorted { lhs, rhs in
             let leftDay = lhs.dueDate.map { calendar.startOfDay(for: $0) } ?? .distantFuture
             let rightDay = rhs.dueDate.map { calendar.startOfDay(for: $0) } ?? .distantFuture

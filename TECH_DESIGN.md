@@ -2,7 +2,7 @@
 
 ## 构建与架构
 
-SwiftUI + EventKit + Foundation，最低 macOS 14，无第三方依赖。用 Swift Package Manager 构建核心库、EventKit 适配层和桌面程序；本机构建脚本生成含 Info.plist、权限说明及 ad-hoc 签名的 .app。不自动安装 Xcode、不登录开发者账号、不发布或公证。
+Swift + SwiftUI + Combine + EventKit + Foundation + UserNotifications + AppKit，最低 macOS 14，无第三方依赖。用 Swift Package Manager 构建核心库、EventKit 适配层和桌面程序；本机构建脚本生成含 Info.plist、权限说明及 ad-hoc 签名的 .app。不自动安装 Xcode、不登录开发者账号、不发布或公证。
 
 核心模块包含任务值对象、查询、统计和限制单清单的服务。EventKit 适配层拥有一个长期存活的 EKEventStore，封装权限、账户元数据、创建清单、查询、获取记录、保存和删除。SwiftUI 状态对象在主线程管理设置、选择、编辑草稿、加载、错误与任务刷新。测试用内存适配器替代系统数据库边界，业务服务与查询逻辑保持真实。
 
@@ -12,9 +12,9 @@ SwiftUI + EventKit + Foundation，最低 macOS 14，无第三方依赖。用 Swi
 
 选型围绕已确认的使用方式：Mac 提供自制原生界面，手机继续操作同一个苹果提醒事项清单。Swift + SwiftUI 负责窗口、表单、快捷键及可访问性；EventKit 负责进入系统提醒事项的数据边界；iCloud 同步由苹果承担。这使首版无需维护独立账号、任务数据库和跨设备同步服务，但仍依赖用户授权、账户配置及苹果同步条件。
 
-共享状态采用系统自带的 Combine / ObservableObject：TodoController 发布任务快照、查询条件、编辑草稿及连接与错误状态，SwiftUI 观察更新。首版单清单规模下，这套状态管理已能覆盖共享状态和失败保护；查询、统计放在值对象中，系统访问放在 ReminderBackend 实现中，界面只组织交互。
+共享状态采用系统自带的 Combine / ObservableObject：TodoController 发布任务快照、查询条件、编辑草稿及连接与错误状态，SwiftUI 观察更新。FocusController 独立发布计时、记录、提醒和本地保存状态，两者由应用持有，多个窗口共用一个计时器。当前单清单规模下，这套状态管理已能覆盖共享状态和失败保护；查询、统计放在值对象中，系统访问放在 ReminderBackend 实现中，界面只组织交互。
 
-样式使用 SwiftUI 的布局、颜色、形状、ButtonStyle 与 ViewModifier，统一主题并保留原生输入行为；日期使用 Foundation 的 Calendar 与 DateComponents，同时匹配按日筛选和 EventKit 浮动日期组件。UserDefaults 只持久化清单标识，任务来自系统，草稿和筛选保留内存；退出前未保存的草稿会丢失。
+样式使用 SwiftUI 的布局、颜色、形状、ButtonStyle 与 ViewModifier，统一主题并保留原生输入行为；日期使用 Foundation 的 Calendar 与 DateComponents，同时匹配按日筛选和 EventKit 浮动日期组件。UserDefaults 只持久化清单标识，任务来自系统，草稿和筛选保留内存；0.3.0 专注记录另存本机 JSON；退出前未保存的草稿会丢失。
 
 Swift Package Manager 分模块构建，Bash 使用已有命令行工具组装和验证自用 `.app`。CoreChecks 是当前 CLT 缺少 Swift Testing 运行库时的可执行断言入口，不增加第三方测试依赖；系统数据库使用内存边界替代，真实规则对象可直接验证映射。自动检查的结果与系统权限、真实写入及跨设备验收分开记录。
 
@@ -65,3 +65,18 @@ ReminderRecurrence 将单条 daily、interval 1、无结束条件和 BY 筛选�
 测试包含真实 EKRecurrenceRule 对象的映射与输出契约，不初始化 EKEventStore；系统数据库边界继续用内存替代。DemoBackend 保持纯内存，只保存设置，不模拟苹果生成。原生日期含具体时间的每日规则视为高级规则。
 
 参考：[苹果重复提醒事项机制](https://developer.apple.com/documentation/eventkit/creating-a-recurring-event)、[原生规则初始化](https://developer.apple.com/documentation/eventkit/ekrecurrencerule/init(recurrencewith:interval:end:))。
+
+
+## 0.3.0 专注子系统
+
+TodoCore 的 FocusEngine 是注入单调时刻与墙钟日期的纯状态机；FocusRun 保存恢复检查点，FocusRecord 使用会话 UUID 去重，FocusKey 以绑定清单、提醒事项标识和重复任务当次截止日期确定归属。墙钟仅用于日期统计；迟到回调按预计到零时刻归属日期。恢复统一为暂停，不把关闭应用的时间算入学习。
+
+FocusController 独立发布专注状态并调用原有 TodoController 的受限摘要写入接口。计时检查单条原生任务的权限、存在、完成状态和实例归属，不只依赖列表缓存；读取失败停止计时。App 持有唯一控制器与 FocusRuntime，1 秒刷新、5 秒检查点，监听 NSWorkspace 睡眠和 NSApplication 正常退出；窗口切换/关闭不会创建新的专注会话。演示预览有独立内存控制器，关闭即丢弃。
+
+FocusStore 协议由 MemoryFocusStore / FileFocusStore 实现；版本 1 Codable JSON 原子写入应用 Application Support，文件权限 0600，不含任务标题或正文。本地写入失败时退出需确认丢弃未保存的专注记录。包含时长、全量完成记录、当前检查点、待写摘要、休息时长及音效开关。读取损坏停止写入，保存失败暂停并保留内存；完整同步导致任务标识改变时不按名称迁移。
+
+FocusNotes 对【小新专注 v1】与【小新专注结束】之间的可读摘要进行严格解析。Mac 的 TaskDraft 和列表/搜索使用用户备注部分；普通保存从当前版本合并回原摘要。摘要更新只改备注，不改完成状态、日期、优先级或重复规则。无效或多个信息段禁止摘要更新，保留原文。应用自身摘要成功后只更新编辑快照版本，未保存用户草稿保持原样；外部版本变化仍报冲突。
+
+FocusNotifier 由 UserNotifications 系统适配器和纯演示实现组成；显式点击才请求权限，按会话安排一次通知，取消时使异步安排代次失效，并预先登记在途请求，防止旧请求重新出现。正常退出由应用 delegate 等待在途安排结束并取消后才退出。授权失败降级为界面提醒和本机音效，有系统声音请求时不叠加 NSSound。内容不包含任务正文。启动清理遗留本应用通知；系统通知/专注模式造成的静音不宣称应用能绕过。
+
+README 详述使用流程、选型理由和手机/本机数据边界；自动测试使用可执行 CoreChecks，不请求真实权限。不自动安装 Xcode、不增加远程服务或第三方依赖。

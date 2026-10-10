@@ -74,8 +74,19 @@ public enum TodoError: LocalizedError, Equatable {
     }
     public func edit(_ task: TodoTask, draft: TaskDraft) throws {
         let current = try latest(task)
-        let draft = try draft.validated(for: current)
+        var draft = try draft.validated(for: current)
+        if (try? FocusNotes.parse(current.notes).summary) != nil {
+            draft.notes = try FocusNotes.composing(userNotes: draft.notes, preserving: current.notes)
+        }
         try backend.update(id: task.id, in: calendarID, expectedRevision: task.revision, draft: draft, completed: nil)
+    }
+    public func writeFocusSummary(_ task: TodoTask, summary: FocusSummary) throws -> TodoTask {
+        let current = try latest(task)
+        guard !current.completed else { throw FocusError.unavailable }
+        var draft = TaskDraft(task: current)
+        draft.notes = try FocusNotes.replacing(in: current.notes, summary: summary)
+        try backend.update(id: current.id, in: calendarID, expectedRevision: current.revision, draft: draft, completed: nil)
+        return try reload(current)
     }
     public func setCompleted(_ task: TodoTask, completed: Bool) throws {
         _ = try latest(task)

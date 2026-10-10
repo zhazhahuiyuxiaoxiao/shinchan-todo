@@ -14,6 +14,7 @@ import TodoCore
     var suspendReads = false
     var pendingReads: [CheckedContinuation<[TodoTask], Error>] = []
     var lastReadList: String?
+    var afterUpdate: (() -> Void)?
     func requestAccess() async throws -> Bool { access == .authorized }
     func accounts() throws -> [ReminderAccount] { [] }
     func createList(in accountID: String) throws -> String { "bound" }
@@ -44,7 +45,7 @@ import TodoCore
         guard task.revision == expectedRevision else { throw TodoError.conflict }
         if let draft { task.title = draft.title; task.notes = draft.notes; task.dueDate = draft.dueDate; task.repeatRule = draft.repeatRule; if task.priority != draft.priority { task.nativePriority = draft.priority.rawValue } }
         if let completed { task.completed = completed }
-        task.revision += "x"; records[id] = task
+        task.revision += "x"; records[id] = task; afterUpdate?()
     }
     func delete(id: String, in calendarID: String, expectedRevision: String) throws {
         if failWrites { throw TodoError.readOnly }

@@ -3,6 +3,7 @@ import TodoCore
 
 struct TaskEditorView: View {
     @ObservedObject var model: TodoController
+    @ObservedObject var focus: FocusController
     let onCancel: () -> Void
     let onDelete: (TodoTask) -> Void
     let onReload: (TodoTask) -> Void
@@ -52,6 +53,8 @@ struct TaskEditorView: View {
                             .keyboardShortcut("s", modifiers: .command).disabled(model.busy)
                         Button("取消", action: onCancel).buttonStyle(CrayonButton(fill: Crayon.paper)).disabled(model.busy)
                     }
+                    if let task = model.editingTask { FocusCard(focus: focus, task: task) }
+                    else { Text("先保存任务，就可以为它设置专注计时。").font(.caption).foregroundStyle(Crayon.muted) }
                     if let task = model.editingTask {
                         Divider()
                         HStack {

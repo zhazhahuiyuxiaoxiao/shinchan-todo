@@ -143,4 +143,29 @@ public enum ConnectionPhase { case disconnected, chooseAccount, ready, unavailab
         errorMessage = nil; notice = nil; loading = false
     }
     public func refreshClock() { now = Date() }
+    public func checkedFocusTask(_ task: TodoTask) throws -> TodoTask {
+        let latest = try service().reload(task)
+        guard latest.revision == task.revision else { throw TodoError.conflict }
+        guard !latest.completed else { throw FocusError.unavailable }
+        return latest
+    }
+    public func currentFocusTask(_ key: FocusKey) throws -> TodoTask {
+        let latest = try service().reload(TodoTask(id: key.taskID, calendarID: key.calendarID, title: ""))
+        guard !latest.completed, FocusKey(task: latest) == key else { throw FocusError.unavailable }
+        return latest
+    }
+    public func writeFocusSummary(_ task: TodoTask, summary: FocusSummary) throws -> TodoTask {
+        guard !busy else { throw FocusError.unavailable }
+        let latest = try service().writeFocusSummary(task, summary: summary)
+        if let index = tasks.firstIndex(where: { $0.id == latest.id }) { tasks[index] = latest }
+        if editingTask?.id == task.id, editingTask?.revision == task.revision {
+            // 仅摘要变化才允许推进草稿基准；保存与重读之间的外部编辑不能被默许覆盖。
+            var before = task; var after = latest
+            before.revision = ""; after.revision = ""
+            before.notes = FocusNotes.editableNotes(before.notes)
+            after.notes = FocusNotes.editableNotes(after.notes)
+            if before == after { editingTask = latest }
+        }
+        return latest
+    }
 }

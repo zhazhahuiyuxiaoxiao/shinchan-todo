@@ -56,6 +56,18 @@ import TodoCore
         await Checks.run("repeat advanced completed conflict scope") { try repeatChangesRespectAdvancedCompletedConflictAndScope() }
         await Checks.run("repeat draft survives write and conflict") { await repeatDraftSurvivesFailureAndCountsAsDirty() }
         await Checks.run("native repeat mapping") { try nativeRepeatMappingProtectsAdvancedRules() }
+        await Checks.run("focus elapsed pause and exactly once completion") { focusUsesElapsedTimeAndFinishesOnce() }
+        await Checks.run("focus rest abandon sleep and recovery") { focusRestAbandonAndRecovery() }
+        await Checks.run("focus daily instances Monday stats and empty") { focusDailyInstancesAndStatistics() }
+        await Checks.run("focus summary preserves Chinese notes and rejects corruption") { try focusSummaryPreservesNotesAndRejectsMalformedBlocks() }
+        await Checks.run("focus file round trip corruption and failure") { try focusFileRoundTripAndCorruption() }
+        await Checks.run("focus notes scope conflict advanced fields and dirty draft") { try focusSummaryServiceKeepsDraftAndOriginalFields() }
+        await Checks.run("focus completion conflict retry and local write failure") { try await focusControllerCompletionFailureAndRetry() }
+        await Checks.run("focus recovery corrupt file and task completion") { await focusControllerScopeRecoveryAndTaskLoss() }
+        await Checks.run("focus stops after completed deleted refresh failure and revoked permission") { await focusStopsAfterSuccessfulMutationWithFailedRefresh() }
+        await Checks.run("notification shutdown drains pending add without duplicate sound") { try await notificationShutdownDrainsInFlightAndAvoidsDoubleSound() }
+        await Checks.run("notification finish invalidates delayed authorization schedule") { try await notificationCompletionBeforeAuthorizationPreventsLateAlert() }
+        await Checks.run("focus reread cannot rebase dirty draft across concurrent external change") { try await focusSummaryRereadCannotAuthorizeOverwritingConcurrentChanges() }
         print("\(Checks.cases) cases, \(Checks.failures) failed assertions")
         exit(Checks.failures == 0 ? 0 : 1)
     }

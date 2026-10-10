@@ -5,6 +5,7 @@ import TodoSystem
 struct RootView: View {
     @ObservedObject var model: TodoController
     let demo: Bool
+    @ObservedObject var focus: FocusController
     @State private var deleteTarget: TodoTask?
     @State private var pendingAction: (() -> Void)?
     @State private var showDiscard = false
@@ -33,11 +34,12 @@ struct RootView: View {
                     }
                     TaskListView(model: model, onSelect: { task in protectDraft { _ = model.select(task, discardChanges: true) } })
                         .frame(minWidth: 300, idealWidth: 410, maxWidth: 650)
-                    TaskEditorView(model: model, onCancel: { protectDraft { model.closeEditor() } }, onDelete: { deleteTarget = $0 }, onReload: { _ in
+                    TaskEditorView(model: model, focus: focus, onCancel: { protectDraft { model.closeEditor() } }, onDelete: { deleteTarget = $0 }, onReload: { _ in
                         protectDraft { _ = model.reloadEditor(discardChanges: true) }
                     }).frame(minWidth: 300)
                 }
             } else { ConnectionView(model: model, onReset: { showReset = true }) }
+            FocusBar(focus: focus)
         }.background(Crayon.cream).foregroundStyle(Crayon.ink)
         .alert("放弃未保存的修改？", isPresented: $showDiscard) {
             Button("继续编辑", role: .cancel) { pendingAction = nil }
@@ -97,7 +99,14 @@ struct RootView: View {
 
 private struct DemoPreviewView: View {
     let onClose: () -> Void
-    @StateObject private var model = TodoController(backend: DemoBackend(), calendarID: DemoBackend.listID)
+    @StateObject private var model: TodoController
+    @StateObject private var focus: FocusController
+    init(onClose: @escaping () -> Void) {
+        self.onClose = onClose
+        let todo = TodoController(backend: DemoBackend(), calendarID: DemoBackend.listID)
+        _model = StateObject(wrappedValue: todo)
+        _focus = StateObject(wrappedValue: FocusController(todo: todo, store: MemoryFocusStore(), notifier: DemoFocusNotifier()))
+    }
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -105,8 +114,11 @@ private struct DemoPreviewView: View {
                 Spacer()
                 Button("结束演示（不保存）", action: onClose).buttonStyle(CrayonButton(fill: Crayon.paper))
             }.padding(12).background(Crayon.cream).layoutPriority(1)
-            RootView(model: model, demo: true)
+            RootView(model: model, demo: true, focus: focus)
         }.frame(maxWidth: .infinity, maxHeight: .infinity).preferredColorScheme(.light)
             .task { await model.refresh() }
+            .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in focus.tick() }
+            .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.willSleepNotification)) { _ in focus.pause() }
+            .onDisappear { focus.pause() }
     }
 }
