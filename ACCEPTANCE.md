@@ -154,3 +154,17 @@
 - 隔离副本以 --demo 运行，没有连接真实提醒事项。原生可访问性按钮操作验证「今天」2条、「逾期」1条、「已完成」1条、「全部」5条；四个动作正常，完整清单统计仍5条。
 - 真实坐标点击尝试报 noWindowsAvailable，置前后仍未取得坐标测试条件。因此未把修复前空白复现或修复后空白点击标记为自动验收通过。用户手动检查：点击每一行文字右侧空白、图标旁边和上下内边距，应立即切换；行与行之间的间隔不属于按钮。
 - 更新前仅检查未保存标记为false，然后关闭应用更新；没有输出或保存真实任务正文，保留绑定设置，没有真实任务写入。原有真实重复及跨设备验收缺口继续保留。
+
+## 0.2.2 应用图标（2026-10-10）
+
+用户报告没有应用图标，并确认奶油色底、小新头像配红色勾选的样式。根因是应用包只有界面插画，Info.plist 未指定图标，打包脚本未生成或复制 .icns。新增图标源图和系统工具转换脚本，补齐 CFBundleIconFile 与签名前资源复制；版本 0.2.2 / build 5。
+
+验收目标 → Packaging/AppIcon.png、Packaging/Info.plist、scripts/build-icon.sh、scripts/build-app.sh。来源与生成提示词 → Packaging/AssetSources.md；README、TECH_DESIGN 及运行时素材来源说明同步更新。
+
+- bash scripts/test.sh：31 cases，0 failed assertions。仅证明原有业务规则回归。
+- release 构建、Info.plist 检查、codesign --verify --deep --strict 均通过；最终应用内包含有效 AppIcon.icns，配置引用一致。
+- 将最终应用中的 .icns 反向解包，10 张标准 1x/2x PNG 均存在，尺寸覆盖 16–1024 像素。源图带 alpha 通道；检查 64 像素预览时头像和勾选仍可辨认。
+- NSWorkspace.icon(forFile:) 读取实际 dist/小新待办.app 并导出 1024 像素图标，原生系统返回小新头像与红色勾选，视觉检查通过。
+- Codex 沙箱内 iconutil 首次返回 Invalid Iconset；各 PNG 格式和尺寸正确，同一输入在沙箱外转换通过。NSWorkspace 检查在沙箱外正常返回；未在项目加入规避或额外依赖。
+- 本次未关闭或重新启动用户已有应用，不查询提醒事项、不修改绑定或任务。重新打开后的实时 Dock 显示仍需用户检查，系统提取结果不冒充 Dock 截图。原有真实同步验收缺口保持未验证。
+- 本机应用与源码压缩包已更新；用户随后授权 Git 提交与推送。GitHub 仅上传源码、图标源图及文档，不上传安装包或构建缓存。

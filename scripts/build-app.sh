@@ -14,6 +14,8 @@ if [[ -d "$app_dir/Contents/MacOS/ShinchanTodo_ShinchanTodo.bundle" ]]; then
 fi
 cp "$binary_dir/ShinchanTodo_ShinchanTodo.bundle/Shinchan.png" "$app_dir/Contents/Resources/Shinchan.png"
 cp "$binary_dir/ShinchanTodo_ShinchanTodo.bundle/AssetSources.md" "$app_dir/Contents/Resources/AssetSources.md"
+bash scripts/build-icon.sh
+cp .build/AppIcon.icns "$app_dir/Contents/Resources/AppIcon.icns"
 codesign --force --sign - --identifier local.zhazhahui.shinchan-todo "$app_dir"
 codesign --verify --deep --strict "$app_dir"
 plutil -lint "$app_dir/Contents/Info.plist"

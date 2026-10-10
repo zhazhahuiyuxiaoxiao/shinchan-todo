@@ -1,6 +1,6 @@
 # 小新待办 · Mac 个人待办应用
 
-当前自用版本：0.2.1，侧栏菜单改为整行点击，保留每天重复与按钮重影修复。
+当前自用版本：0.2.2，补齐小新头像与红色勾选的应用图标，保留侧栏整行点击、每天重复与按钮重影修复。
 
 个人使用的原生 Mac 待办应用。Mac 用这个界面，iPhone 用苹果提醒事项，数据来自你新建并绑定的一个专用 iCloud 清单。没有独立服务器、账号系统、第三方依赖或任务数据库。
 
@@ -149,6 +149,8 @@ open "dist/小新待办.app"
 - 外部任务带时间或重复规则时，日期在本应用只读；其他支持字段仍可编辑，并保留原有高级属性。
 
 ## 构建与测试
+
+应用图标源图为 `Packaging/AppIcon.png`。打包时 `scripts/build-icon.sh` 使用 macOS 自带的 sips 和 iconutil 生成 16–1024 像素的多尺寸 `.icns`，复制到应用 Resources，并通过 Info.plist 的 CFBundleIconFile 指定。图标来源和生成提示词见 [Packaging/AssetSources.md](Packaging/AssetSources.md)。
 
 要求 macOS 14 以上，以及支持 Swift Package 6.0 的 Swift 命令行工具。本次使用已有 Swift 6.3.1，不安装 Xcode。
 
