@@ -128,7 +128,9 @@ DemoBackend 和 EventKitBackend 实现同一个数据边界，演示复用真实
 
 ## 获取并运行
 
-仓库提供源码和文档。现成的本机构建、缓存和压缩包不加入 Git；克隆后请在 Mac 上构建：
+可在 [0.3.1 Release](https://github.com/zhazhahuiyuxiaoxiao/shinchan-todo/releases/tag/v0.3.1) 下载 [Apple Silicon 应用包](https://github.com/zhazhahuiyuxiaoxiao/shinchan-todo/releases/download/v0.3.1/shinchan-todo-mac-arm64-0.3.1.zip)，解压得到「小新待办.app」。版本为 0.3.1（build 7），最低要求 macOS 14；只在当前 Apple Silicon Mac 验证过，Intel 不适用。包使用本地 ad-hoc 签名，尚未进行正式开发者签名和 Apple 公证，其他 Mac 是否接受由系统安全策略决定。首次可选择纯内存演示。Release 同时提供 SHA256SUMS.txt 校验文件。
+
+源码、测试和文档保存在仓库；应用包作为 Release 附件提供，缓存、偏好和个人数据不加入 Git。也可以在 Mac 上从源码构建：
 
 ```bash
 git clone https://github.com/zhazhahuiyuxiaoxiao/shinchan-todo.git
@@ -181,7 +183,7 @@ bash scripts/build-app.sh
 
 测试用可执行的 `CoreChecks`：失败会打印断言并以非零状态退出。当前 CLT 的 Swift Testing 缺少 `lib_TestingInterop.dylib`，所以没有使用 `swift test`，也没有伪称其通过。测试使用真实 EKRecurrenceRule 对象和内存数据边界，不请求系统权限、读取私人任务或改动 iCloud。
 
-构建生成 `dist/小新待办.app`，包含权限说明、插画、系统框架链接和本地 ad-hoc 签名。仅本机 Apple Silicon 构建已运行；没有开发者账号签名、公证或公开分发，不能保证其他 Mac 直接接受。最低版本声明与二进制为 macOS 14，但尚未在 macOS 14 真机运行。更新自用构建后，系统可能要求再次授权。
+构建生成 `dist/小新待办.app`，包含权限说明、插画、系统框架链接和本地 ad-hoc 签名。仅本机 Apple Silicon 构建已运行；没有正式开发者账号签名或公证，不能保证其他 Mac 直接接受；用户已批准将 0.3.1 体验包提供为 Release 附件。最低版本声明与二进制为 macOS 14，但尚未在 macOS 14 真机运行。更新自用构建后，系统可能要求再次授权。
 
 ## 项目文件
 
@@ -199,9 +201,9 @@ bash scripts/build-app.sh
 
 - 自动业务检查：45 组通过，包含原有 31 组任务检查与 14 组专注及输入检查；release 构建、Info.plist 与本地签名校验通过。演示中已检查开始、暂停、换任务确认、1 分钟到零及统计、中文草稿保留和正常退出。
 - 每日重复已接入原生规则；真实 EventKit 写入、完成后下一次生成、重启保留及 iPhone 同步仍需在专用测试清单验收。
-- 真实通知授权与呈现、Mac 休眠唤醒、正式数据退出恢复、手机专注摘要同步、最小窗口及完整键盘导航仍待实测；侧栏整行点击已设置，空白处命中仍待手动确认。
+- 任务卡片边缘与留白点击已由用户在本机手动验收通过（2026-10-10）。真实通知、Mac 休眠恢复、手机专注摘要同步、最小窗口、跨窗口失焦及完整键盘导航仍待实测；侧栏空白处点击的旧验收缺口保留。
 - 不提供任务分类、子任务、每周/自定义重复编辑、任务到期通知或习惯打卡分析。
-- 目前为个人工具源码展示；本机 `.app` 为 Apple Silicon 自用构建，没有正式开发者签名、公证或公开安装包发布。macOS 14 真机与 Intel 尚未实测。
+- 仓库提供个人工具源码展示及 0.3.1 Release 体验包；应用为 Apple Silicon 构建，没有正式开发者签名或公证。macOS 14 真机尚未实测，当前下载包不支持 Intel。
 
 完整证据、操作步骤和待验收项见 [ACCEPTANCE.md](ACCEPTANCE.md)。
 

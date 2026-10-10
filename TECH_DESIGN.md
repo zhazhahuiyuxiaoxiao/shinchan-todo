@@ -2,7 +2,7 @@
 
 ## 构建与架构
 
-Swift + SwiftUI + Combine + EventKit + Foundation + UserNotifications + AppKit，最低 macOS 14，无第三方依赖。用 Swift Package Manager 构建核心库、EventKit 适配层和桌面程序；本机构建脚本生成含 Info.plist、权限说明及 ad-hoc 签名的 .app。不自动安装 Xcode、不登录开发者账号、不发布或公证。
+Swift + SwiftUI + Combine + EventKit + Foundation + UserNotifications + AppKit，最低 macOS 14，无第三方依赖。用 Swift Package Manager 构建核心库、EventKit 适配层和桌面程序；本机构建脚本生成含 Info.plist、权限说明及 ad-hoc 签名的 .app。不自动安装 Xcode、不登录开发者账号、不自动公证。0.3.1 经用户追加批准，可将验证后的 arm64 应用 ZIP 和 SHA256 校验文件发布为 GitHub Release 附件；源码历史继续排除构建产物和个人数据。
 
 核心模块包含任务值对象、查询、统计和限制单清单的服务。EventKit 适配层拥有一个长期存活的 EKEventStore，封装权限、账户元数据、创建清单、查询、获取记录、保存和删除。SwiftUI 状态对象在主线程管理设置、选择、编辑草稿、加载、错误与任务刷新。测试用内存适配器替代系统数据库边界，业务服务与查询逻辑保持真实。
 
