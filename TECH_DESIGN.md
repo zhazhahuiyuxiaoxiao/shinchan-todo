@@ -80,3 +80,10 @@ FocusNotes 对【小新专注 v1】与【小新专注结束】之间的可读摘
 FocusNotifier 由 UserNotifications 系统适配器和纯演示实现组成；显式点击才请求权限，按会话安排一次通知，取消时使异步安排代次失效，并预先登记在途请求，防止旧请求重新出现。正常退出由应用 delegate 等待在途安排结束并取消后才退出。授权失败降级为界面提醒和本机音效，有系统声音请求时不叠加 NSSound。内容不包含任务正文。启动清理遗留本应用通知；系统通知/专注模式造成的静音不宣称应用能绕过。
 
 README 详述使用流程、选型理由和手机/本机数据边界；自动测试使用可执行 CoreChecks，不请求真实权限。不自动安装 Xcode、不增加远程服务或第三方依赖。
+
+
+## 0.3.1 点击范围与分钟输入
+
+TaskListView 使用 ZStack 中两个兄弟 Button：编辑按钮的 label 包含完整内边距、背景和 RoundedRectangle contentShape，完成圆圈单独放在左上方。描边 overlay 禁用命中，避免视觉边界挡住点击；不通过嵌套 Button 或外层 onTapGesture 混合完成与编辑动作。
+
+FocusCard 使用 String 草稿、FocusState 和 onSubmit 实现输入；FocusDurationInput 仅接受范围内十进制整数，回车、失焦及启动前校验；卡片直接切换销毁时通过 onDisappear 提交有效输入，避免只依赖失焦通知导致丢失。非法值不截断或默默变为默认值，不更新持久化偏好。Stepper 与文本共用同一提交入口；TaskEditorView 按 FocusKey 设置卡片身份，避免切换任务复用上一任务的输入。保存时长可能更新任务摘要版本，启动时使用 TodoController 保留的当前编辑快照，沿用原有版本、范围及权限检查。没有增加依赖或改变 JSON 格式。

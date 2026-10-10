@@ -53,7 +53,7 @@ struct TaskEditorView: View {
                             .keyboardShortcut("s", modifiers: .command).disabled(model.busy)
                         Button("取消", action: onCancel).buttonStyle(CrayonButton(fill: Crayon.paper)).disabled(model.busy)
                     }
-                    if let task = model.editingTask { FocusCard(focus: focus, task: task) }
+                    if let task = model.editingTask { FocusCard(focus: focus, task: task).id(FocusKey(task: task)) }
                     else { Text("先保存任务，就可以为它设置专注计时。").font(.caption).foregroundStyle(Crayon.muted) }
                     if let task = model.editingTask {
                         Divider()

@@ -65,12 +65,7 @@ struct TaskListView: View {
         }.padding(20).background(Crayon.paper)
     }
     private func row(_ task: TodoTask) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Button { Task { await model.toggle(task) } } label: {
-                Image(systemName: task.completed ? "checkmark.circle.fill" : "circle").font(.system(size: 23))
-                    .foregroundStyle(task.completed ? Crayon.red : Crayon.ink).frame(width: 36, height: 36)
-            }.buttonStyle(.plain).accessibilityLabel("\(task.completed ? "恢复" : "完成")任务：\(task.title)")
-                .disabled(model.busy || (model.isDirty && model.editingTask?.id == task.id))
+        ZStack(alignment: .topLeading) {
             Button { onSelect(task) } label: {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(task.title).font(.system(size: 15, weight: .bold)).strikethrough(task.completed).lineLimit(3).multilineTextAlignment(.leading)
@@ -84,9 +79,18 @@ struct TaskListView: View {
                         Label(task.repeatRule == .daily ? "每天重复" : "其他重复规则", systemImage: "repeat")
                             .font(.system(size: 11)).foregroundStyle(Crayon.muted)
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 3)
+                }.frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                    .padding(.vertical, 3).padding(.leading, 44).padding(12)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 13))
+                    .contentShape(RoundedRectangle(cornerRadius: 13))
             }.buttonStyle(.plain).accessibilityLabel("编辑任务：\(task.title)").disabled(model.busy)
-        }.padding(12).background(.white, in: RoundedRectangle(cornerRadius: 13))
-            .overlay(RoundedRectangle(cornerRadius: 13).stroke(model.editingTask?.id == task.id ? Crayon.red : Crayon.ink.opacity(0.55), lineWidth: model.editingTask?.id == task.id ? 2 : 1))
+            // 完成按钮是独立兄弟控件，不嵌套在编辑按钮中，圆圈以外均打开详情。
+            Button { Task { await model.toggle(task) } } label: {
+                Image(systemName: task.completed ? "checkmark.circle.fill" : "circle").font(.system(size: 23))
+                    .foregroundStyle(task.completed ? Crayon.red : Crayon.ink).frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityLabel("\(task.completed ? "恢复" : "完成")任务：\(task.title)")
+                .disabled(model.busy || (model.isDirty && model.editingTask?.id == task.id)).padding(12)
+        }.overlay(RoundedRectangle(cornerRadius: 13).stroke(model.editingTask?.id == task.id ? Crayon.red : Crayon.ink.opacity(0.55), lineWidth: model.editingTask?.id == task.id ? 2 : 1).allowsHitTesting(false))
     }
 }

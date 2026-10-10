@@ -68,6 +68,8 @@ import TodoCore
         await Checks.run("notification shutdown drains pending add without duplicate sound") { try await notificationShutdownDrainsInFlightAndAvoidsDoubleSound() }
         await Checks.run("notification finish invalidates delayed authorization schedule") { try await notificationCompletionBeforeAuthorizationPreventsLateAlert() }
         await Checks.run("focus reread cannot rebase dirty draft across concurrent external change") { try await focusSummaryRereadCannotAuthorizeOverwritingConcurrentChanges() }
+        await Checks.run("focus duration manual input bounds and invalid text") { focusDurationTextRejectsInvalidInput() }
+        await Checks.run("focus duration settings preserve active round and persist") { await focusDurationSettingsDoNotChangeActiveRun() }
         print("\(Checks.cases) cases, \(Checks.failures) failed assertions")
         exit(Checks.failures == 0 ? 0 : 1)
     }

@@ -89,3 +89,38 @@ import TodoSystem
     let invalid = FileFocusStore(url: directory.appendingPathComponent("focus.json/child"))
     do { try invalid.save(archive); expect(false) } catch { }
 }
+
+@MainActor func focusDurationTextRejectsInvalidInput() {
+    expect(FocusDurationInput.minutes(from: "45", in: 1...180) == 45)
+    expect(FocusDurationInput.minutes(from: " 60 ", in: 1...60) == 60)
+    expect(FocusDurationInput.minutes(from: "1", in: 1...180) == 1)
+    expect(FocusDurationInput.minutes(from: "180", in: 1...180) == 180)
+    for text in ["", " ", "0", "181", "-1", "+25", "1.5", "abc", "25分钟", "999999999999999999999999"] {
+        expect(FocusDurationInput.minutes(from: text, in: 1...180) == nil)
+    }
+    expect(FocusDurationInput.minutes(from: "61", in: 1...60) == nil)
+}
+
+@MainActor func focusDurationSettingsDoNotChangeActiveRun() async {
+    let backend = MemoryBoundary()
+    let task = TodoTask(id: "a", calendarID: "bound", title: "学习", revision: "1")
+    backend.records[task.id] = task
+    let todo = TodoController(backend: backend, calendarID: "bound"); await todo.refresh()
+    let store = MemoryFocusStore()
+    let focus = FocusController(todo: todo, store: store, notifier: DemoFocusNotifier())
+    if let minutes = FocusDurationInput.minutes(from: "45", in: 1...180) { focus.setMinutes(minutes, for: todo.tasks[0]) }
+    expect(focus.minutes(for: todo.tasks[0]) == 45)
+    await focus.start(todo.tasks[0])
+    expect(focus.archive.run?.minutes == 45)
+    focus.setMinutes(90, for: todo.tasks[0])
+    expect(focus.minutes(for: todo.tasks[0]) == 45)
+    focus.pause(); focus.setMinutes(60, for: todo.tasks[0])
+    expect(focus.archive.run?.minutes == 45)
+    expect(focus.minutes(for: todo.tasks[0]) == 45)
+    focus.abandon()
+    focus.setMinutes(60, for: todo.tasks[0])
+    focus.setRestMinutes(15)
+    let restored = FocusController(todo: todo, store: store, notifier: DemoFocusNotifier())
+    expect(restored.minutes(for: todo.tasks[0]) == 60)
+    expect(restored.archive.restMinutes == 15)
+}
