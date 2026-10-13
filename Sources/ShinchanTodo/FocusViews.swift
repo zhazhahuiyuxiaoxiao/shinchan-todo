@@ -21,7 +21,8 @@ struct FocusCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("给这件小事一点专注时间", systemImage: "timer").font(.system(size: 14, weight: .bold))
-            durationInput("专注", field: .work, text: $workText, range: 1...180,
+            LearningProgressView(focus: focus, task: task)
+            durationInput("每轮专注", field: .work, text: $workText, range: 1...180,
                           disabled: locked || task.completed || focus.storageBlocked)
             durationInput("休息", field: .rest, text: $restText, range: 1...60,
                           disabled: restLocked || focus.storageBlocked)
@@ -131,6 +132,9 @@ struct FocusBar: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 14) { current; Spacer(minLength: 8); statistics; controls }
                 VStack(alignment: .leading, spacing: 10) { current; HStack { statistics; Spacer(); controls } }
+            }
+            if let run = focus.archive.run, let task = focus.todo.tasks.first(where: { FocusKey(task: $0) == run.key }) {
+                LearningProgressView(focus: focus, task: task)
             }
             Text(focus.notificationStatus).font(.caption2).foregroundStyle(Crayon.muted)
             if let notice = focus.notice { Text(notice).font(.caption).foregroundStyle(Crayon.muted).fixedSize(horizontal: false, vertical: true) }

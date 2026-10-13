@@ -12,6 +12,9 @@ struct RootView: View {
     @State private var showReset = false
     @State private var showDemo = false
     @State private var showSidebar = true
+    @State private var showLearningRoutes = false
+    @State private var learningDirty = false
+    @State private var discardMessage = "任务或学习设置尚未保存。继续会丢弃这些未保存的内容。"
     var body: some View {
         Group {
             if showDemo { DemoPreviewView(onClose: { showDemo = false }) }
@@ -29,14 +32,22 @@ struct RootView: View {
             if model.phase == .ready {
                 HSplitView {
                     if showSidebar {
-                        SidebarView(model: model, demo: demo, onReset: { showReset = true })
+                        SidebarView(model: model, demo: demo, onReset: { showReset = true }, learningSelected: showLearningRoutes, onTaskView: { view in
+                            protectDraft { showLearningRoutes = false; model.query.view = view; model.query.status = .all }
+                        }, onLearning: { protectDraft { showLearningRoutes = true; model.closeEditor(); learningDirty = false } })
                             .frame(minWidth: 190, idealWidth: 215, maxWidth: 240)
                     }
-                    TaskListView(model: model, onSelect: { task in protectDraft { _ = model.select(task, discardChanges: true) } })
-                        .frame(minWidth: 300, idealWidth: 410, maxWidth: 650)
-                    TaskEditorView(model: model, focus: focus, onCancel: { protectDraft { model.closeEditor() } }, onDelete: { deleteTarget = $0 }, onReload: { _ in
-                        protectDraft { _ = model.reloadEditor(discardChanges: true) }
-                    }).frame(minWidth: 300)
+                    if showLearningRoutes {
+                        LearningRoutesView(focus: focus, onTask: { task in
+                            protectDraft { showLearningRoutes = false; _ = model.select(task, discardChanges: true) }
+                        })
+                    } else {
+                        TaskListView(model: model, focus: focus, onSelect: { task in protectDraft { _ = model.select(task, discardChanges: true) } })
+                            .frame(minWidth: 300, idealWidth: 410, maxWidth: 650)
+                        TaskEditorView(model: model, focus: focus, onCancel: { protectDraft { model.closeEditor() } }, onDelete: { deleteTarget = $0 }, onReload: { _ in
+                            protectDraft { _ = model.reloadEditor(discardChanges: true) }
+                        }, onSave: saveTask, onLearningDirty: { learningDirty = $0 }).frame(minWidth: 300)
+                    }
                 }
             } else { ConnectionView(model: model, onReset: { showReset = true }) }
             FocusBar(focus: focus)
@@ -44,7 +55,7 @@ struct RootView: View {
         .alert("放弃未保存的修改？", isPresented: $showDiscard) {
             Button("继续编辑", role: .cancel) { pendingAction = nil }
             Button("放弃修改", role: .destructive) { let action = pendingAction; pendingAction = nil; action?() }
-        } message: { Text("草稿还没有写入提醒事项。继续会丢弃这些未保存的内容。") }
+        } message: { Text(discardMessage) }
         .alert("删除这条任务？", isPresented: Binding(get: { deleteTarget != nil }, set: { if !$0 { deleteTarget = nil } }), presenting: deleteTarget) { task in
             Button("取消", role: .cancel) { deleteTarget = nil }
             Button("删除任务", role: .destructive) { Task { await model.delete(task) }; deleteTarget = nil }
@@ -56,8 +67,16 @@ struct RootView: View {
             Button("重新设置") { protectDraft { model.resetConnection() } }
         } message: { Text("只解除应用绑定，原清单和其中的任务保留。随后需要你明确创建一个新清单。") }
     }
+    private func saveTask() {
+        if learningDirty {
+            discardMessage = "学习设置尚未保存。保存任务会关闭详情并丢弃这些学习修改；任务标题和备注将正常保存。"
+            pendingAction = { Task { await model.save() } }; showDiscard = true
+        } else { Task { await model.save() } }
+    }
     private func protectDraft(_ action: @escaping () -> Void) {
-        if model.isDirty { pendingAction = action; showDiscard = true }
+        if model.isDirty || learningDirty {
+            discardMessage = "任务或学习设置尚未保存。继续会丢弃这些未保存的内容。"
+            pendingAction = action; showDiscard = true }
         else { action() }
     }
     private var header: some View {
@@ -79,7 +98,7 @@ struct RootView: View {
                     .keyboardShortcut("b", modifiers: [.command, .option])
                 Button { Task { await model.refresh() } } label: { Label("刷新", systemImage: "arrow.clockwise") }
                     .buttonStyle(CrayonButton(fill: Crayon.paper)).keyboardShortcut("r", modifiers: .command).disabled(model.busy)
-                Button { protectDraft { _ = model.beginNew(discardChanges: true) } } label: { Label("新建任务", systemImage: "plus") }
+                Button { protectDraft { showLearningRoutes = false; _ = model.beginNew(discardChanges: true) } } label: { Label("新建任务", systemImage: "plus") }
                     .buttonStyle(CrayonButton(fill: Crayon.red, foreground: .white)).keyboardShortcut("n", modifiers: .command).disabled(model.busy)
             }
         }.padding(.horizontal, 24).padding(.vertical, 10).background(Crayon.cream)

@@ -35,32 +35,61 @@ public struct FocusRun: Codable, Equatable, Sendable {
     public var remaining: Double
     public var running: Bool
     public let startedAt: Date
+    public var learning: LearningContext? = nil
 }
 public struct FocusRecord: Codable, Equatable, Sendable {
     public let id: UUID
     public let key: FocusKey
     public let minutes: Int
     public let completedAt: Date
+    public let learning: LearningContext?
+    public init(id: UUID, key: FocusKey, minutes: Int, completedAt: Date, learning: LearningContext? = nil) {
+        self.id = id; self.key = key; self.minutes = minutes; self.completedAt = completedAt; self.learning = learning
+    }
 }
 public struct FocusPreference: Codable, Equatable, Sendable {
     public let key: FocusKey
     public var minutes: Int
+    public var dailyGoalMinutes: Int?
+    public var learning: LearningContext?
+    public init(key: FocusKey, minutes: Int, dailyGoalMinutes: Int? = nil, learning: LearningContext? = nil) {
+        self.key = key; self.minutes = minutes; self.dailyGoalMinutes = dailyGoalMinutes; self.learning = learning
+    }
 }
 public struct FocusArchive: Codable, Equatable, Sendable {
-    public var version = 1
+    public var version = 2
     public var preferences: [FocusPreference] = []
     public var records: [FocusRecord] = []
     public var run: FocusRun?
     public var pendingSummaries: [FocusKey] = []
     public var restMinutes = 5
     public var soundEnabled = true
+    public var routes: [LearningRoute] = []
     public init() {}
+    private enum CodingKeys: String, CodingKey { case version, preferences, records, run, pendingSummaries, restMinutes, soundEnabled, routes }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decode(Int.self, forKey: .version)
+        guard version == 1 || version == 2 else { throw FocusError.invalidFile }
+        preferences = try values.decode([FocusPreference].self, forKey: .preferences)
+        records = try values.decode([FocusRecord].self, forKey: .records)
+        run = try values.decodeIfPresent(FocusRun.self, forKey: .run)
+        pendingSummaries = try values.decode([FocusKey].self, forKey: .pendingSummaries)
+        restMinutes = try values.decode(Int.self, forKey: .restMinutes)
+        soundEnabled = try values.decode(Bool.self, forKey: .soundEnabled)
+        routes = version == 1 ? [] : try values.decode([LearningRoute].self, forKey: .routes)
+    }
+    public func upgraded() throws -> Self {
+        var result = try validated(); result.version = 2; return result
+    }
     public func validated() throws -> Self {
-        guard version == 1, (1...60).contains(restMinutes),
-              preferences.allSatisfy({ (1...180).contains($0.minutes) }),
+        guard version == 1 || version == 2, (1...60).contains(restMinutes),
+              preferences.allSatisfy({ (1...180).contains($0.minutes) && ($0.dailyGoalMinutes.map { (1...1440).contains($0) } ?? true) }),
               records.allSatisfy({ (1...180).contains($0.minutes) }),
               Set(records.map(\.id)).count == records.count,
               Set(preferences.map(\.key)).count == preferences.count else { throw FocusError.invalidFile }
+        guard Set(routes.map(\.id)).count == routes.count else { throw FocusError.invalidFile }
+        for route in routes { try route.validated() }
         if let run {
             guard (1...(run.kind == .work ? 180 : 60)).contains(run.minutes),
                   run.remaining.isFinite, run.remaining >= 0, run.remaining <= Double(run.minutes * 60),
@@ -88,8 +117,8 @@ public struct FocusEngine {
     public init(archive: FocusArchive = FocusArchive()) {
         self.archive = archive; self.archive.run?.running = false
     }
-    public mutating func start(key: FocusKey, minutes: Int, kind: FocusKind, monotonic: Double, date: Date) {
-        archive.run = FocusRun(key: key, kind: kind, minutes: minutes, remaining: Double(minutes * 60), running: true, startedAt: date)
+    public mutating func start(key: FocusKey, minutes: Int, kind: FocusKind, monotonic: Double, date: Date, learning: LearningContext? = nil) {
+        archive.run = FocusRun(key: key, kind: kind, minutes: minutes, remaining: Double(minutes * 60), running: true, startedAt: date, learning: learning)
         anchor = monotonic
     }
     public mutating func tick(monotonic: Double, date: Date) {
@@ -101,7 +130,7 @@ public struct FocusEngine {
             if run.kind == .work, !archive.records.contains(where: { $0.id == run.id }) {
                 // 延迟回调按真正到零时的日期归属，不把午夜前结束计入次日。
                 let completion = date.addingTimeInterval(-max(0, elapsed - (archive.run?.remaining ?? 0)))
-                archive.records.append(FocusRecord(id: run.id, key: run.key, minutes: run.minutes, completedAt: completion))
+                archive.records.append(FocusRecord(id: run.id, key: run.key, minutes: run.minutes, completedAt: completion, learning: run.learning))
                 if !archive.pendingSummaries.contains(run.key) { archive.pendingSummaries.append(run.key) }
             }
         }

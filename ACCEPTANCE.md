@@ -289,3 +289,31 @@ EventKit 规则对象的往返测试证明映射参数，演示证明界面流�
 ### 0.4.0 源码提交前复核
 
 用户随后明确要求 Git 提交及推送。重新运行 `bash scripts/test.sh`：54 组检查、0 个失败断言；重新运行 `bash scripts/build-app.sh`：release 编译、ad-hoc 签名验证和 Info.plist 检查通过。提交范围为重复规则源码、测试、版本配置和 PRD / TECH_DESIGN / AGENTS / README / 本验收记录。没有再次操作真实提醒事项或 iPhone，以上未验证条件保持原状态。应用包、演示副本、专注 JSON、偏好绑定和构建缓存不进入本次提交；0.4.0 Release 未发布。
+
+
+## 0.5.0 学习路线与每日专注进度（2026-10-13）
+
+实现与验收目标映射：
+
+| 目标 | 实现位置/符号 |
+| --- | --- |
+| 独立路线、有序阶段、手动打卡/恢复日期 | LearningModel.swift 的 LearningRoute/LearningStage；FocusLearningController 的路线/阶段操作；LearningRoutesView |
+| 每日可选目标、完整轮次按日和实例隔离 | FocusPreference、FocusDailyProgress、FocusController.dailyProgress；FocusEngine 保持完整结束口径 |
+| 阶段切换不改写历史 | FocusRun.learning 开始冻结，FocusRecord.learning 完整结束继承；suggestedStage 只推荐、setLearning 显式保存 |
+| 手机日期摘要、重复任务继承 | FocusNotes v1/v2、FocusDailySummary、LearningRouteSummary、dailyGoal/learningContext、refreshLearningDate |
+| 迁移备份及失败保护 | FocusArchive v2 解码/验证；FileFocusStore.load/save/legacyBackupURL；FocusController 单一原子存储入口 |
+| 草稿、按钮与多处进度 | RootView.protectDraft/saveTask；TaskLearningCard 的 editorGeneration；LearningProgressView 与任务/路线卡片按钮语义 |
+
+自动检查：64 项 CoreChecks、0 失败（本轮最终运行结果）。新增覆盖：120目标40完整轮次剩80；25完整轮次剩95且第二轮15分钟不扣减；休息/放弃/重置、到零去重、跨午夜/次日/原生实例隔离；阶段手动完成/恢复/排序及固定历史关联；目标范围、权限与进行中守卫；失败保存内存保留；v1完整记录/偏好/检查点升级、原始备份不变、备份冲突/损坏/未来版本停止覆盖；v2中文换行/保留标记可逆摘要及损坏拒绝；原生下一实例在同日出现或次日出现时均继承设置但不继承累计；日期刷新并发冲突保留；创建稳定ID重试不重复、路线失败时摘要待写同存；多关联任务一项成功不掩盖另一项失败。
+
+构建：0.5.0（build 9）、Apple Silicon arm64、macOS14最低版本；release编译、既有图标构建、ad-hoc签名深度/严格验证和Info.plist检查通过。沙箱内iconutil出现Invalid Iconset，完整打包脚本在审批允许的沙箱外成功运行；未安装依赖或改变打包链路。
+
+原生演示界面：使用独立测试bundle标识、--demo纯内存运行，不操作原有应用。验证空路线、创建/空名称错误、阶段回车保存、手动完成/日期/恢复/上移下移；任务路线和阶段选择、0目标错误、120目标保存；Cmd+S遇到学习草稿显示专门确认，取消保留；载入最新确认放弃后130恢复已保存120；打卡后提示下一阶段，选择仍需保存；进行中学习设置锁定；实际一分钟完整轮次后详情与底栏显示1/120、剩119且任务未完成。截图检查中文长阶段换行和默认窗口布局。最终构建再次核对带进度任务卡片与长标题路线卡片保持原生button语义，包含可访问性标签/进度值。
+
+独立审查：按requesting-code-review技能进行了只读审查，修复任务保存丢学习草稿、明确载入最新不重建、创建失败重试重复和手机摘要待写遗漏；复核未发现这些修复引入新的明确缺陷。审查未替代实机同步验收。
+
+后续本机验收：用户授权后，将0.5.0安装至标准应用目录并正常启动；原清单绑定保持，本机v1存档升级v2，旧记录/偏好与备份逐项核对一致。通过正式应用完成路线创建、阶段关联和每日目标保存；每条任务的原备注、日期、重复规则、每轮时长和历史记录均经界面与存档核对保持，手机可读摘要的本机EventKit写入成功。具体私人路线、任务、目标、记录、原生标识及备份不记录在源码文档中，也不进入Git。
+
+未验证及边界：iPhone/iCloud实际同步、苹果真实下一实例生成、真实存档回滚、具体940×660最小窗口、最大系统文字和VoiceOver完整朗读流程未逐项实测，不能以本机写入或演示代替。手机展示最后更新日期的本机摘要，Mac关闭期间不会刷新。老版本不能读取v2存档/摘要，回退时应使用保留的v1备份。没有修改本次范围外的既有问题；0.5.0应用包未公开发布。
+
+源码提交前复核：用户最后授权Git提交及推送，使用当前feature/learning-progress分支。完整CoreChecks重新运行64项、0失败；提交范围仅为源码、测试、版本配置和项目文档。应用包、演示副本、本机JSON、清单绑定、个人备注、备份和构建缓存全部排除。

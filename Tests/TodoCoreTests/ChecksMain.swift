@@ -79,6 +79,16 @@ import TodoCore
         await Checks.run("repeat end date covers full DST day") { try repeatEndDateIncludesFullDayAcrossDST() }
         await Checks.run("repeat presets positions and focus instances") { try repeatPresetsAndMonthlyPositionMapping() }
         await Checks.run("explicit draft reset invalidates editor inputs but refresh keeps them") { try await explicitDraftResetChangesEditorIdentityButBackgroundUpdatesDoNot() }
+        await Checks.run("learning route manual checkins and ordering") { try await learningRoutesKeepManualCheckinsAndOrder() }
+        await Checks.run("daily goal complete rounds and frozen stage history") { try await dailyGoalCountsOnlyCompleteRoundsAndKeepsStageHistory() }
+        await Checks.run("daily goal midnight rest and instance boundaries") { dailyGoalMidnightRestAndInstanceIsolation() }
+        await Checks.run("learning settings permission active run and storage failures") { try await learningSettingsRejectUnsafeChangesAndRetainFailedWrites() }
+        await Checks.run("learning archive migration backup and recovery") { try learningArchiveMigratesWithoutInventingHistory() }
+        await Checks.run("learning phone v2 summary preserves text and rejects corruption") { try learningSummaryV2PreservesNotesAndRejectsDamage() }
+        await Checks.run("learning repeat inherits settings and date refresh preserves conflicts") { try await repeatedTaskInheritsLearningButNotTodayAndRefreshesDate() }
+        await Checks.run("learning creation retry is idempotent and failed route changes queue summaries") { try await learningCreationRetriesKeepIdentityAndQueuePhoneUpdates() }
+        await Checks.run("daily goal 25 minute rounds and multi-task summary error visibility") { try await dailyGoal25MinuteRoundsAndMultipleSummaryFailures() }
+        await Checks.run("learning backup conflict corrupt save and future version preserve source") { try learningBackupFailureAndCorruptSaveNeverOverwriteSource() }
         print("\(Checks.cases) cases, \(Checks.failures) failed assertions")
         exit(Checks.failures == 0 ? 0 : 1)
     }

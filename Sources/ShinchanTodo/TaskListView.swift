@@ -5,19 +5,29 @@ struct SidebarView: View {
     @ObservedObject var model: TodoController
     let demo: Bool
     let onReset: () -> Void
+    let learningSelected: Bool
+    let onTaskView: (TaskView) -> Void
+    let onLearning: () -> Void
     var body: some View {
         ScrollView {
         VStack(alignment: .leading, spacing: 22) {
             Text("我的小清单").font(.system(size: 13, weight: .bold)).foregroundStyle(Crayon.muted)
             ForEach(TaskView.allCases) { view in
-                Button { model.query.view = view; model.query.status = .all } label: {
+                Button { onTaskView(view) } label: {
                     HStack(spacing: 12) { Image(systemName: view.icon).frame(width: 20); Text(view.title); Spacer() }
                         .font(.system(size: 15, weight: .bold)).padding(12)
-                        .background(model.query.view == view ? Crayon.yellow : .clear, in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(model.query.view == view ? Crayon.ink : .clear, lineWidth: 1.5))
+                        .background((model.query.view == view && !learningSelected) ? Crayon.yellow : .clear, in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke((model.query.view == view && !learningSelected) ? Crayon.ink : .clear, lineWidth: 1.5))
                         .contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityAddTraits(model.query.view == view ? .isSelected : [])
+                }.buttonStyle(.plain).accessibilityAddTraits((model.query.view == view && !learningSelected) ? .isSelected : [])
             }
+            Button(action: onLearning) {
+                HStack(spacing: 12) { Image(systemName: "map").frame(width: 20); Text("学习路线"); Spacer() }
+                    .font(.system(size: 15, weight: .bold)).padding(12)
+                    .background(learningSelected ? Crayon.yellow : .clear, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(learningSelected ? Crayon.ink : .clear, lineWidth: 1.5))
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityAddTraits(learningSelected ? .isSelected : [])
             VStack(alignment: .leading, spacing: 12) {
                 Text("一点点，也算进步").font(.system(size: 14, weight: .bold))
                 stat("全部", value: model.statistics.total); stat("未完成", value: model.statistics.pending)
@@ -39,6 +49,7 @@ struct SidebarView: View {
 }
 struct TaskListView: View {
     @ObservedObject var model: TodoController
+    @ObservedObject var focus: FocusController
     let onSelect: (TodoTask) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -69,6 +80,7 @@ struct TaskListView: View {
             Button { onSelect(task) } label: {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(task.title).font(.system(size: 15, weight: .bold)).strikethrough(task.completed).lineLimit(3).multilineTextAlignment(.leading)
+                    LearningProgressView(focus: focus, task: task, decorativeProgress: true)
                     if !FocusNotes.editableNotes(task.notes).isEmpty { Text(FocusNotes.editableNotes(task.notes)).font(.system(size: 12)).foregroundStyle(Crayon.muted).lineLimit(2).multilineTextAlignment(.leading) }
                     HStack(spacing: 8) {
                         if let due = task.dueDate { Label(due.formatted(.dateTime.month().day()), systemImage: "calendar").font(.system(size: 11)) }
@@ -83,7 +95,7 @@ struct TaskListView: View {
                     .padding(.vertical, 3).padding(.leading, 44).padding(12)
                     .background(.white, in: RoundedRectangle(cornerRadius: 13))
                     .contentShape(RoundedRectangle(cornerRadius: 13))
-            }.buttonStyle(.plain).accessibilityLabel("编辑任务：\(task.title)").disabled(model.busy)
+            }.buttonStyle(.plain).accessibilityLabel("编辑任务：\(task.title)").accessibilityValue([focus.learningTitle(for: task), focus.dailyGoal(for: task) == nil ? nil : focus.dailyProgress(for: task).title].compactMap { $0 }.joined(separator: "；")).disabled(model.busy)
             // 完成按钮是独立兄弟控件，不嵌套在编辑按钮中，圆圈以外均打开详情。
             Button { Task { await model.toggle(task) } } label: {
                 Image(systemName: task.completed ? "checkmark.circle.fill" : "circle").font(.system(size: 23))

@@ -7,6 +7,8 @@ struct TaskEditorView: View {
     let onCancel: () -> Void
     let onDelete: (TodoTask) -> Void
     let onReload: (TodoTask) -> Void
+    let onSave: () -> Void
+    let onLearningDirty: (Bool) -> Void
     @FocusState private var titleFocused: Bool
     var body: some View {
         if model.hasEditor {
@@ -20,6 +22,7 @@ struct TaskEditorView: View {
                         Text("标题").font(.system(size: 13, weight: .bold))
                         TextField("想做什么？", text: $model.draft.title, axis: .vertical).lineLimit(1...4).textFieldStyle(.roundedBorder).focused($titleFocused)
                     }
+                    if let task = model.editingTask { TaskLearningCard(focus: focus, task: task, onDirty: onLearningDirty).id(model.editorGeneration) }
                     VStack(alignment: .leading, spacing: 8) {
                         Text("备注").font(.system(size: 13, weight: .bold))
                         TextEditor(text: $model.draft.notes).font(.system(size: 14)).scrollContentBackground(.hidden).padding(7).frame(minHeight: 150)
@@ -39,7 +42,7 @@ struct TaskEditorView: View {
                     RepeatEditorView(draft: $model.draft, task: model.editingTask)
                         .id(model.editorGeneration)
                     HStack(spacing: 12) {
-                        Button("保存任务") { Task { await model.save() } }.buttonStyle(CrayonButton(fill: Crayon.red, foreground: .white))
+                        Button("保存任务", action: onSave).buttonStyle(CrayonButton(fill: Crayon.red, foreground: .white))
                             .keyboardShortcut("s", modifiers: .command).disabled(model.busy)
                         Button("取消", action: onCancel).buttonStyle(CrayonButton(fill: Crayon.paper)).disabled(model.busy)
                     }

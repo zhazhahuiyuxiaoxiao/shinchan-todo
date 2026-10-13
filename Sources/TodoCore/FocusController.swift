@@ -9,12 +9,13 @@ import Combine
     @Published public private(set) var storageBlocked = false
     @Published public private(set) var hasUnsavedArchive = false
     public let todo: TodoController
-    private var engine = FocusEngine()
+    var engine = FocusEngine()
     private let store: any FocusStore
     private let notifier: any FocusNotifier
     private let monotonic: () -> Double
-    private let date: () -> Date
-    private var expectedTasks: [FocusKey: TodoTask] = [:]
+    let date: () -> Date
+    var expectedTasks: [FocusKey: TodoTask] = [:]
+    var summaryDay: String?
     private var lastCheckpoint = -Double.infinity
     public init(todo: TodoController, store: any FocusStore, notifier: any FocusNotifier,
                 monotonic: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime }, date: @escaping () -> Date = Date.init) {
@@ -37,10 +38,11 @@ import Combine
         do {
             let loaded = try store.load().validated()
             engine = FocusEngine(archive: loaded); archive = engine.archive; storageBlocked = false; errorMessage = nil
+            summaryDay = nil
             if loaded.run?.running == true { notice = "已从最近检查点恢复为暂停；异常退出前最多 5 秒的进度可能未保存。" }
         } catch { storageBlocked = true; errorMessage = error.localizedDescription }
     }
-    @discardableResult private func persist() -> Bool {
+    @discardableResult func persist() -> Bool {
         archive = engine.archive
         guard !storageBlocked else { return false }
         do { try store.save(archive); lastCheckpoint = monotonic(); hasUnsavedArchive = false; return true }
@@ -51,14 +53,19 @@ import Combine
             return false
         }
     }
+    func saveLearning() throws {
+        guard persist() else { throw LearningError.saveFailed }
+        errorMessage = nil
+    }
     public func retrySave() {
         if storageBlocked { load() } else if persist() { errorMessage = nil; notice = "专注记录已保存到这台 Mac。" }
     }
     public func setMinutes(_ minutes: Int, for task: TodoTask) {
         guard !storageBlocked, (1...180).contains(minutes), archive.run?.key != FocusKey(task: task) || archive.run?.remaining == 0 else { return }
         let key = FocusKey(task: task)
+        let goal = dailyGoal(for: task); let context = learningContext(for: task)
         engine.archive.preferences.removeAll { $0.key == key }
-        engine.archive.preferences.append(FocusPreference(key: key, minutes: minutes))
+        engine.archive.preferences.append(FocusPreference(key: key, minutes: minutes, dailyGoalMinutes: goal, learning: context))
         markPending(key); expectedTasks[key] = task
         if persist() { syncSummary(key, expected: task) }
     }
@@ -86,7 +93,7 @@ import Combine
             let checked = try todo.checkedFocusTask(task)
             let key = FocusKey(task: checked); let minutes = minutes(for: checked)
             notifier.cancel(); errorMessage = nil; notice = nil
-            engine.start(key: key, minutes: minutes, kind: .work, monotonic: monotonic(), date: date())
+            engine.start(key: key, minutes: minutes, kind: .work, monotonic: monotonic(), date: date(), learning: learningContext(for: checked))
             expectedTasks[key] = checked; markPending(key)
             if persist() { syncSummary(key, expected: checked); await schedule() }
         } catch { errorMessage = error.localizedDescription }
@@ -103,6 +110,7 @@ import Combine
                 if archive.records.count > before, let expected = expectedTasks[run.key] { syncSummary(run.key, expected: expected) }
             }
         } else if archive.run?.running == true, monotonic() - lastCheckpoint >= 5 { _ = persist() }
+        refreshLearningDate()
     }
     public func pause() {
         tick(); engine.pause(monotonic: monotonic(), date: date()); notifier.cancel(); _ = persist()
@@ -148,7 +156,7 @@ import Combine
             }
         }
     }
-    private func markPending(_ key: FocusKey) {
+    func markPending(_ key: FocusKey) {
         if !engine.archive.pendingSummaries.contains(key) { engine.archive.pendingSummaries.append(key) }
     }
     public func retrySummary(for task: TodoTask) {
@@ -157,16 +165,16 @@ import Combine
         do { let checked = try todo.checkedFocusTask(task); syncSummary(FocusKey(task: checked), expected: checked) }
         catch { errorMessage = "摘要未写入。\(error.localizedDescription)" }
     }
-    private func syncSummary(_ key: FocusKey, expected: TodoTask) {
+    func syncSummary(_ key: FocusKey, expected: TodoTask) {
         guard todo.phase == .ready, !storageBlocked else { return }
         do {
             guard FocusKey(task: expected) == key else { throw FocusError.unavailable }
             let records = engine.archive.records.filter { $0.key == key }
             let summary = FocusSummary(minutes: minutes(for: expected), rounds: records.count,
-                                       totalMinutes: records.reduce(0) { $0 + $1.minutes }, lastCompleted: records.map(\.completedAt).max(), occurrence: key.occurrence)
+                                       totalMinutes: records.reduce(0) { $0 + $1.minutes }, lastCompleted: records.map(\.completedAt).max(), occurrence: key.occurrence, daily: dailySummary(for: expected))
             let latest = try todo.writeFocusSummary(expected, summary: summary); expectedTasks[key] = latest
             engine.archive.pendingSummaries.removeAll { $0 == key }
-            if persist() { errorMessage = nil }
+            if persist(), engine.archive.pendingSummaries.isEmpty { errorMessage = nil }
         } catch { errorMessage = "摘要未写入，本地专注记录保留。\(error.localizedDescription)" }
     }
     private func schedule() async {

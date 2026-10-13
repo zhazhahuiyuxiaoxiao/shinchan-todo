@@ -106,3 +106,16 @@ TaskDraft.validated 校验变化规则的首次日期、间隔、星期、月内
 FocusKey、专注 JSON 版本、清单绑定及系统授权没有变化。重复模型扩展为所有支持频率，但实例继续由标识及当次日期区分；完整历史和偏好文件无需迁移。DemoBackend 只保存纯内存设置，不初始化 EKEventStore，不生成下一次。
 
 自动检查使用真实 EKRecurrenceRule 及核心服务/控制器，不访问真实数据。交付仍须运行全量 CoreChecks、release 编译、应用包验证及独立演示 UI；本机存储/提醒事项/iPhone 的真实验证各自记录。未增加 Swift Package、网络 API、后台服务或手机应用。
+
+
+## 0.5.0 学习路线与每日专注进度
+
+TodoCore新增LearningRoute、LearningStage、LearningContext、FocusDailyProgress。路线和阶段使用稳定UUID，有序数组表达顺序，completedAt表达手动打卡；每日进度复用FocusStatistics结束日期口径并先按FocusKey过滤。FocusPreference增加可选dailyGoalMinutes与learning关联；FocusRun开始时冻结关联，FocusRecord完整结束时继承；旧记录可选关联为空。
+
+FocusArchive v2新增routes，仍由FocusController与FileFocusStore作为唯一原子存储入口。学习操作放在FocusLearningController扩展，与核心计时分开组织，所有变更先持久化本地再更新受限手机摘要。v1解码允许缺少新字段，v2必须包含routes；FileFocusStore读取升级到内存v2、首次写入前验证现有文件并将v1原始字节保存为Focus.json.v1.backup（0600），备份冲突拒绝覆盖。文件损坏、未知版本或写入失败保护保持；恢复统一暂停。
+
+FocusNotes同时识别v1/v2，v2增加FocusDailySummary和LearningRouteSummary；严格核对日期、目标范围、剩余计算、阶段数和关联UUID。路线/阶段名称用JSON字符串编码并转义保留标记，避免中文长文、换行或保留字损坏信息段。普通任务保存继续合并回摘要，所有摘要写入继续走ReminderService单清单与期望版本检查。下一次实例只从有效摘要继承设置，统计仍查本机当前FocusKey，不按名称合并记录。
+
+每秒tick先推进计时与保存检查点，再执行日期摘要刷新，避免日期更新保存旧计时进度。进入ready后按当前日期刷新已有专注信息的未完成任务；同一天出现新的原生重复实例时也按实例标识差异立即重建摘要，清除继承的旧累计，存在待重试冲突时不自动覆盖。路线改名、添加、排序或打卡更新当前关联任务的摘要。摘要失败与本地保存失败分开报告，手动核对后重试。
+
+SwiftUI侧栏新增独立路线视图；TaskLearningCard用独立显式保存草稿，RootView导航同时保护任务和学习设置草稿，editorGeneration保证明确载入最新后重建。LearningProgressView在任务卡片、专注详情和全局计时栏复用，只读展示相同统计。阶段使用原生按钮完成和排序，图标有语义标签，长文换行、进度搭配文本、不依赖颜色识别状态。演示仍使用MemoryFocusStore/DemoBackend，不读取真实记录。
