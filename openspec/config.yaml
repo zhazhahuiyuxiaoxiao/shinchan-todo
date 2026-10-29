@@ -1,0 +1,14 @@
+schema: spec-driven
+context: |
+  shinchan-todo。SwiftUI 原生 Mac 个人待办；源码为 0.4.0/build 8，EventKit 限定专用清单，专注记录为本地 JSON；不把本机写入等同 iCloud 同步完成。
+  当前基线为 main@ec5812c40b73b6befeaa7391e5894a37f1e16431，核对日期 2026-10-29。
+  本次只补录文档；以源码和测试为准，不声称外部平台或生产验证通过。
+rules:
+  proposal:
+    - 写明问题、范围、验收标准与必须保持的行为；权限和数据语义变化需确认。
+  specs:
+    - 区分现状与期望；每项需求使用 SHALL 或 MUST，并提供 WHEN/THEN 场景和源码依据。
+  design:
+    - 沿用现有架构，说明失败路径、隐私边界和新增复杂度。
+  tasks:
+    - 将实现、针对性测试、文档同步与尚未验证的集成分开记录。
